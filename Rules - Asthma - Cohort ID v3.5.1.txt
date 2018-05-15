@@ -1,0 +1,264 @@
+﻿RULE PROPERTIES
+
+Name:  		cohort_Identification_Asthma	
+Condition:  		Asthma
+Rule Type:    	 	
+Intent: 		Find adult individuals who have asthma and evidence of inadequate
+			therapy 
+Last Modified:		05/15/18
+Version History:	3.5.1
+
+3.5 – Created using 2.4 as skeleton 
+3.5.1 – Revised and added additional tags to build base.
+
+LITERATURE: (RELEVANT LITERATURE SECTIONS) 
+
+UpToDate: https://www.uptodate.com/contents/an-overview-of-asthma-management?source=search_result&search=asthma%20drugs&selectedTitle=1~150
+
+GLOBAL VARIABLES
+
+
+CONFIGURABLE VARIABLES
+
+int ASTHMA_lookback = 183 days
+int ASTHMA_timeframe = 365 days
+int SABA_rx_lookback = 730 days
+int ASTHMA_rv_timeframe = 91 days
+LOCAL VARIABLES
+
+COMMENTS
+
+RULE
+
+
+
+RULE
+
+void cohort_Identification_Asthma (void)
+{
+	
+	IF general_Adult_Inclusion_Criteria () == TRUE
+	AND hasDiagnosis (#{ASTHMA})
+	AND NOT (hasOneDiagnosis (#{DNR}, DNR_timeframe)
+	AND DNR_drug_reveals_setting () == FALSE
+	THEN
+	{
+		setHrvDiagnosis ("ASTHMA ALL")
+		
+		IF hasOneDiagnosis (#{ASTHMA}, ASTHMA_lookback)
+		THEN setHrvSubdiagnosis ("ASTHMA COHORT")
+	}
+	
+	IF hrvDiagnosisIncludes ("ASTHMA ALL")
+	AND hasOneDiagnosis (#{ASTHMA_ACUTE}, ASTHMA_timeframe)
+	THEN setHrvTag("ASTH Group N1aaa Acute Asthma All")
+	
+	IF hrvTagIncludes("ASTH Group N1aaa Acute Asthma All")
+	THEN
+	{
+		IF NOT hasOneDiagnosis(#{ASTHMA}, ASTHMA_lookback)
+		setHrvTag ("ASTH Group D1nrv6 AAA No RV 6 mo")
+		
+		IF NOT hasOneDiagnosis(#{ASTHMA}, ASTHMA_rv_timeframe)
+		setHrvTag ("ASTH Group D1nrv3 AAA No RV 3 mo")
+		
+		IF isRelated (#{ASTHMA_ACUTE}, #{ED_VISITS}, UCA_buffer, ASTHMA_timeframe)
+		OR isRelated (#{ASTHMA_ACUTE}, #{HOSPITALIZATION}, UCA_ buffer, ASTHMA_timeframe)
+		OR isRelated (#{ASTHMA_ACUTE}, #{CRITICAL_CARE}, UCA_ buffer, ASTHMA_timeframe)
+		OR isRelated (#{ASTHMA_ACUTE}, #{INTUBATION}, UCA_ buffer, ASTHMA_timeframe)
+		THEN setHrvTag ("ASTH Group D1all Uncontrolled Asthmatic")
+		
+	}
+	
+	
+	IF hrvSubdiagnosisIncludes ("ASTHMA COHORT")
+	THEN
+	{	
+		IF hasOneDiagnosis (#{ASTHMA_ACUTE}, ASTHMA_timeframe)
+		THEN 
+		{
+			setHrvTag ("ASTH Group N1aa Acute Asthma")
+			IF isRelated (#{ASTHMA_ACUTE}, #{ED_VISITS}, UCA_buffer, ASTHMA_timeframe)
+			OR isRelated (#{ASTHMA_ACUTE}, #{HOSPITALIZATION}, UCA_ buffer, ASTHMA_timeframe)
+			OR isRelated (#{ASTHMA_ACUTE}, #{CRITICAL_CARE}, UCA_ buffer, ASTHMA_timeframe)
+			OR isRelated (#{ASTHMA_ACUTE}, #{INTUBATION}, UCA_ buffer, ASTHMA_timeframe)
+			THEN setHrvTag ("ASTH Group D1caa Uncontrolled Asthmatic")
+		}
+		
+		IF hasOneDiagnosis (#{ASTHMA_ACUTE}, ASTHMA_lookback)
+		THEN 
+		{	
+			setHrvTag ("ASTH Group N1raa Recent Acute Asthma")
+			IF isRelated (#{ASTHMA_ACUTE}, #{ED_VISITS}, UCA_buffer, ASTHMA_lookback)
+			OR isRelated (#{ASTHMA_ACUTE}, #{HOSPITALIZATION}, UCA_ buffer, ASTHMA_lookback)
+			OR isRelated (#{ASTHMA_ACUTE}, #{CRITICAL_CARE}, UCA_ buffer, ASTHMA_lookback)
+			OR isRelated (#{ASTHMA_ACUTE}, #{INTUBATION}, UCA_ buffer, ASTHMA_lookback)
+			THEN setHrvTag ("ASTH Group D1cra Uncontrolled Asthmatic")
+		}
+		IF currentlyPrescribed (#{CORTICOSTEROIDS_INHALED})
+		THEN setHrvTag ("ASTH Group D1ics Asthma Any on ICS")
+		ELSE setHrvTag ("ASTH Group D1nics Asthma Any no ICS")
+		
+		IF currentlyPrescribed (#{ICS_NO_LABA})
+		THEN setHrvTag ("ASTH Group D1inl Asthma Any on ICS no LABA")
+		
+		IF currentlyPrescribed (#{ICS_PLUS_LABA})
+		THEN setHrvTag ("ASTH Group D1ipl Asthma Any on ICS plus LABA")
+		
+		IF currentlyPrescribed (#{BETA_AGONISTS_LONG_ACTING})
+		THEN setHrvTag ("ASTH Group D1laba Asthma Any with LABA")
+		
+		IF currentlyPrescribed (#{LEUKOTRIENE_MODIFIERS})
+		THEN setHrvTag ("ASTH Group D1leu Asthma Any with Leukotriene Mod")
+		
+		IF currentlyPrescribed (#{ASTHMA_BIOLOGICS})
+		THEN setHrvTag ("ASTH Group D1bio Asthma Any with Biologic Med")
+		
+		IF currentlyPrescribed (#{THEOPHYLLINE})
+		THEN setHrvTag ("ASTH Group D1theo Asthma Any with Theophylline")
+		
+		IF currentlyPrescribed (#{CROMOGLYCATES})
+		THEN setHrvTag ("ASTH Group D1cro Asthma Any with Cromoglycates")
+		
+		IF currentlyPrescribed (#{ASTHMA_DRUGS_OTHER})
+		THEN setHrvTag ("ASTH Group D1oth Asthma Any with Other Asthma Med")
+		
+		IF hrvTagIncludes ("ASTH Group D1ics Asthma Any with ICS")
+		OR hrvTagIncludes ("ASTH Group D1laba Asthma Any with LABA")
+		OR hrvTagIncludes ("ASTH Group D1leu Asthma Any with Leukotriene Mod")
+		OR hrvTagIncludes ("ASTH Group D1bio Asthma Any with Biologic Med")
+		OR hrvTagIncludes ("ASTH Group D1theo Asthma Any with Theophylline")
+		OR hrvTagIncludes ("ASTH Group D1cro Asthma Any with Cromoglycates")
+		OR hrvTagIncludes ("ASTH Group D1oth Asthma Any with Other Asthma Med")
+		THEN setHrvTag ("ASTH Group D1ocm Asthma Any on controller med")
+		ELSE setHrvTag ("ASTH Group D1ncm Asthma Any no controller med")
+		
+		
+		
+		//IF hadDone (#{CRITICAL_CARE}, ASTHMA_timeframe)
+		//THEN setHrvTag ("ASTH Group N1cc Recent Critical Care")
+		
+		// We can't currently know whether the ED visit was for asthma or not......
+		//IF hadDone (#{ED_VISITS}, ASTHMA_timeframe)
+		//THEN setHrvTag ("ASTH Group N1ev Recent ED Visit")
+		
+		// We can't know the hospitalization was for asthma, but at least there was
+		// an asthma claim close in time
+		//IF hospitalizedForWithin (#{ASTHMA}, ASTHMA_timeframe, SAME_timeframe)
+		//THEN setHrvTag ("ASTH Group N1ah Recent Asthma Hospitalization")
+		
+		// Check for oral steroids in the past year
+		//IF currentlyPrescribed (#{CORTICOSTEROIDS_ORAL}, ASTHMA_timeframe)
+		//THEN setHrvTag ("ASTH Group N1ogc Recent Oral GC")
+		
+		
+		IF currentlyPrescribed (#{BETA_AGONISTS_SHORT_ACTING}, SABA_rx_lookback)
+		
+		THEN
+		{
+			setHrvDiagnosis ("ASTH Group D2as Asthma with SABA")
+			
+			IF hrvTagIncludes ("ASTH Group N1aa Acute Asthma")
+			THEN setHrvTag ("ASTH Group D2as Acute Asthma on SABA")
+			
+			IF hrvtagIncludes ("ASTH Group D2as Acute Asthma on SABA")
+			THEN 
+			{
+				IF NOT hasOneDiagnosis (#{ASTHMA}, ASTHMA_rv_timeframe)
+				setHrvTag("ASTH Group D2nrv3")
+				
+				IF currentlyPrescribed (#{CORTICOSTEROIDS_INHALED}) 
+				THEN setHrvTag ("ASTH Group D2ics AA on ICS")
+				ELSE setHrvTag ("ASTH Group D2nics AA no ICS") 
+				
+				
+				IF currentlyPrescribed (#{ICS_NO_LABA})
+				THEN setHrvTag ("ASTH Group D2inl AA on ICS no LABA")
+				
+				IF currentlyPrescribed (#{ICS_PLUS_LABA})
+				THEN setHrvTag ("ASTH Group D2ipl AA on ICS plus LABA")
+				
+				IF currentlyPrescribed (#{BETA_AGONISTS_LONG_ACTING})
+				THEN setHrvTag ("ASTH Group D2laba AA with LABA")
+				
+				IF currentlyPrescribed (#{LEUKOTRIENE_MODIFIERS})
+				THEN setHrvTag ("ASTH Group D1leu AA with Leukotriene Mod")
+				
+				IF currentlyPrescribed (#{ASTHMA_BIOLOGICS})
+				THEN setHrvTag ("ASTH Group D2bio AA with Biologic Med")
+				
+				IF currentlyPrescribed (#{THEOPHYLLINE})
+				THEN setHrvTag ("ASTH Group D2theo AA with Theophylline")
+				
+				IF currentlyPrescribed (#{CROMOGLYCATES})
+				THEN setHrvTag ("ASTH Group D2cro AA with Cromoglycates")
+				
+				IF currentlyPrescribed (#{ASTHMA_DRUGS_OTHER})
+				THEN setHrvTag ("ASTH Group D2oth AA with Other Asthma Med")
+				
+				IF hrvTagIncludes ("ASTH Group D2ics AA with ICS")
+				OR hrvTagIncludes ("ASTH Group D2laba AA with LABA")
+				OR hrvTagIncludes ("ASTH Group D2leu AA with Leukotriene Mod")
+				OR hrvTagIncludes ("ASTH Group D2bio AA with Biologic Med")
+				OR hrvTagIncludes ("ASTH Group D2theo AA with Theophylline")
+				OR hrvTagIncludes ("ASTH Group D2cro AA with Cromoglycates")
+				OR hrvTagIncludes ("ASTH Group D2oth AA with Other")
+				THEN setHrvTag ("ASTH Group D2ocm AA on controller med")
+				ELSE setHrvTag ("ASTH Group D2ncm AA no controller med")
+				
+			}
+			
+			IF hrvTagIncludes ("ASTH Group N1raa RAA")
+			//OR hrvTagIncludes ("ASTH Group N1cc Recent Critical Care")
+			//OR hrvTagIncludes ("ASTH Group N1ev Recent ED Visit")
+			//OR hrvTagIncludes ("ASTH Group N1ah Recent Asthma Hospitalization")
+			//OR hrvTagIncludes ("ASTH Group N1ogc Recent Oral GC")
+			THEN
+			{
+				setHrvTag ("ASTH Group D3rs RAA on SABA")
+				
+				IF currentlyPrescribed (#{CORTICOSTEROIDS_INHALED})
+				THEN setHrvTag ("ASTH Group D3ics RAA on ICS")
+				ELSE setHrvTag ("ASTH Group D3nics RAA no ICS")
+				
+				IF currentlyPrescribed (#{ICS_NO_LABA})
+				THEN setHrvTag ("ASTH Group D3inl RAA on ICS no LABA")
+				
+				IF currentlyPrescribed (#{ICS_PLUS_LABA})
+				THEN setHrvTag ("ASTH Group D3ipl RAA on ICS plus LABA")
+				
+				IF currentlyPrescribed (#{BETA_AGONISTS_LONG_ACTING})
+				THEN setHrvTag ("ASTH Group D3laba RAA with LABA")
+				
+				IF currentlyPrescribed (#{LEUKOTRIENE_MODIFIERS})
+				THEN setHrvTag ("ASTH Group D3leu RAA with Leukotriene Mod")
+				
+				IF currentlyPrescribed (#{ASTHMA_BIOLOGICS})
+				THEN setHrvTag ("ASTH Group D3bio RAA with Biologic Med")
+				
+				IF currentlyPrescribed (#{THEOPHYLLINE})
+				THEN setHrvTag ("ASTH Group D3theo RAA with Theophylline")
+				
+				IF currentlyPrescribed (#{CROMOGLYCATES})
+				THEN setHrvTag ("ASTH Group D3cro RAA with Cromoglycates")
+				
+				IF currentlyPrescribed (#{ASTHMA_DRUGS_OTHER})
+				THEN setHrvTag ("ASTH Group D3oth RAA with Other Asthma Med")
+				
+				IF hrvTagIncludes ("ASTH Group D3ics RAA with ICS")
+				OR hrvTagIncludes ("ASTH Group D3laba RAA with LABA")
+				OR hrvTagIncludes ("ASTH Group D3leu RAA with Leukotriene Mod")
+				OR hrvTagIncludes ("ASTH Group D3bio RAA with Biologic Med")
+				OR hrvTagIncludes ("ASTH Group D3theo RAA with Theophylline")
+				OR hrvTagIncludes ("ASTH Group D3cro RAA with Cromoglycates")
+				OR hrvTagIncludes ("ASTH Group D3oth RAA with Other Asthma Med")
+				THEN setHrvTag ("ASTH Group D3ocm on controller med")
+				ELSE setHrvTag ("ASTH Group D3ncm no controller med")
+				
+			}  			
+		}  // end of SABA group
+		
+		return ()
+	}
+}
+
